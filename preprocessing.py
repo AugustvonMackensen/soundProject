@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import librosa
 from librosa.feature import melspectrogram
 import torch
+import torchaudio
+import torchaudio.functional as F
 
 '''
 test_librosa : librosa 전처리 코드
@@ -38,6 +40,59 @@ def melstogram(waveform, sr, win_length, hop_length):
     img = librosa.display.specshow(s_db, x_axis='time', y_axis='mel', sr=sr, ax=ax)
 
 
+'''
+noise 추가하는 함수
+'''
+def add_noise(waveform, sr, effect):
+    effector = torchaudio.io.AudioEffector(effect=effect)
+    noise = effector.apply(waveform, sr)
+
+    print(f'before effect : {waveform.shape}')
+    print(f'after effect : {noise.shape}')
+
+    return noise
+
+def plot_waveform(waveform, sample_rate, title="Waveform", xlim=None):
+    waveform = waveform.numpy()
+
+    num_channels, num_frames = waveform.shape
+    time_axis = torch.arange(0, num_frames) / sample_rate
+
+    figure, axes = plt.subplots(num_channels, 1)
+    if num_channels == 1:
+        axes = [axes]
+    for c in range(num_channels):
+        axes[c].plot(time_axis, waveform[c], linewidth=1)
+        axes[c].grid(True)
+        if num_channels > 1:
+            axes[c].set_ylabel(f"Channel {c+1}")
+        if xlim:
+            axes[c].set_xlim(xlim)
+    figure.suptitle(title)
+
+
+def plot_specgram(waveform, sample_rate, title="Spectrogram", xlim=None):
+    waveform = waveform.numpy()
+
+    num_channels, _ = waveform.shape
+
+    figure, axes = plt.subplots(num_channels, 1)
+    if num_channels == 1:
+        axes = [axes]
+    for c in range(num_channels):
+        axes[c].specgram(waveform[c], Fs=sample_rate)
+        if num_channels > 1:
+            axes[c].set_ylabel(f"Channel {c+1}")
+        if xlim:
+            axes[c].set_xlim(xlim)
+    figure.suptitle(title)
+
+def add_background_noise(wav_path, noise_path, snr_dbs):
+    speech, speech_sr = torchaudio.load(wav_path)
+    noise, noise_sr = torchaudio.load(noise_path)
+    noise = noise[:, :speech.shape[1]]
+
+    noise_speeches = F.add_noise(speech, noise, snr_dbs)
 
 
 
